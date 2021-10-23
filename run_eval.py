@@ -251,7 +251,7 @@ def main():
             data_args.dataset_config_name
             )
 
-        if data_args.prompts is None:
+        if data_args.dataset_prompt is None:
             prompt_list = prompt_collections.all_template_names
         else:
             prompt_list = [data_args.dataset_prompt]
