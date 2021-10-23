@@ -106,6 +106,13 @@ class DataTrainingArguments:
     dataset_prompt: Optional[str] = field(
         default=None, metadata={"help": "The name of the prompt the dataset uses."}
     )
+    max_predict_samples: Optional[int] = field(
+        default=None,
+        metadata={
+            "help": "For debugging purposes or quicker training, truncate the number of training examples to this "
+            "value if set."
+        },
+    )
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
     )
@@ -234,14 +241,18 @@ def main():
 
     if data_args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
-        raw_datasets = load_dataset(
+        raw_dataset = load_dataset(
             data_args.dataset_name,
             data_args.dataset_config_name,
             cache_dir=model_args.cache_dir
         )
 
         data_split = data_args.dataset_split_name
-        predict_dataset = raw_datasets[data_split]
+        predict_dataset = raw_dataset[data_split]
+
+        if data_args.max_predict_samples is not None:
+            predict_dataset = predict_dataset.select(range(data_args.max_predict_samples))
+
         column_names = predict_dataset.column_names
 
         # Get all the prompts
@@ -298,8 +309,10 @@ def main():
         # Some simple post-processing
         # decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
 
-        result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-        result = {"accuracy": result["score"]}
+        #result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+        #result = {"accuracy": result["score"]}
+        seq_acc = 100 * np.mean([p == t for p, t in zip(decoded_preds, decoded_labels)])
+        result = {"accuracy": seq_acc}
 
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
