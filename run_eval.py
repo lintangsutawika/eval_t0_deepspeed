@@ -103,6 +103,9 @@ class DataTrainingArguments:
     dataset_split_name: Optional[str] = field(
         default=None, metadata={"help": "The split name of the dataset to use (via the datasets library)."}
     )
+    dataset_prompt: Optional[str] = field(
+        default=None, metadata={"help": "The name of the prompt the dataset uses."}
+    )
     overwrite_cache: bool = field(
         default=False, metadata={"help": "Overwrite the cached training and evaluation sets"}
     )
@@ -247,7 +250,11 @@ def main():
             data_args.dataset_name,
             data_args.dataset_config_name
             )
-        prompt_list = prompt_collections.all_template_names
+
+        if data_args.prompts is None:
+            prompt_list = prompt_collections.all_template_names
+        else:
+            prompt_list = [data_args.dataset_prompt]
 
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
