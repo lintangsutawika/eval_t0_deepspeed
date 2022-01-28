@@ -21,6 +21,7 @@ Fine-tuning the library models for sequence to sequence.
 import logging
 import os
 import sys
+from functools import partial
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -102,6 +103,9 @@ class DataTrainingArguments:
     )
     dataset_split_name: Optional[str] = field(
         default=None, metadata={"help": "The split name of the dataset to use (via the datasets library)."}
+    )
+    custom_template: bool = field(
+        default=False, metadata={"help": ""}
     )
     dataset_prompt: Optional[str] = field(
         default=None, metadata={"help": "The name of the prompt the dataset uses."}
@@ -208,17 +212,12 @@ def main():
 
     model.resize_token_embeddings(len(tokenizer))
 
-    def preprocess_function(examples):
+    def preprocess_function(ex, prompt_fn):
 
         max_length = data_args.max_length
         padding = "max_length"
 
-        example_key = list(examples.keys())
-        _examples = []
-        for i in range(len(examples[example_key[0]])):
-            _examples.append({key: examples[key][i] for key in example_key})
-
-        result = [prompt_collections[prompt].apply(example) for example in _examples for prompt in prompt_list]
+        result = [prompt_fn(ex)]
         inputs, targets = zip(*result)
         inputs = list(inputs)
         targets = list(targets)
@@ -227,7 +226,7 @@ def main():
 
         # Setup the tokenizer for targets
         with tokenizer.as_target_tokenizer():
-            labels = tokenizer(targets, max_length=max_length, padding=padding, truncation=True)
+            labels = tokenizer(targets, max_length=258, padding=padding, truncation=True)
 
         # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
         # padding in the loss.
@@ -262,14 +261,33 @@ def main():
             data_args.dataset_config_name
             )
 
-        if data_args.dataset_prompt is None:
-            prompt_list = prompt_collections.all_template_names
+        if data_args.custom_template:
+            import re
+
+            def map_fn(ex):
+
+                ex['passage'] =  re.sub('@highlight', '', ex['passage'])
+                ex['query'] =  re.sub('@placeholder', 'BLANK', ex['query'])
+
+                return [
+                    "Passage: {passage} \n \
+                    Quary: {query} \n \
+                    According to the passage, what does the BLANK in the query refer to? \
+                    ".format(**ex),
+                    ex["answers"],
+                ]
+            prompt_fn = map_fn
         else:
-            prompt_list = [data_args.dataset_prompt]
+            if data_args.dataset_prompt is None:
+                prompt = prompt_collections.all_template_names[0]
+            else:
+                prompt = data_args.dataset_prompt
+
+            prompt_fn = prompt_collections[prompt].apply
 
         with training_args.main_process_first(desc="prediction dataset map pre-processing"):
             predict_dataset = predict_dataset.map(
-                preprocess_function,
+                partial(preprocess_function, prompt_fn=prompt_fn),
                 batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 remove_columns=column_names,
