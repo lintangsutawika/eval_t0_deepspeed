@@ -219,23 +219,26 @@ def main():
 
         result = [prompt_fn(ex)]
         inputs, targets = zip(*result)
-        inputs = list(inputs)
-        targets = list(targets)
+        inputs = list(inputs)[0]
+        targets = list(targets)[0]
 
-        model_inputs = tokenizer(inputs, padding=padding)
+        model_inputs = tokenizer.encode_plus(
+            inputs,
+            add_special_tokens=False,
+            padding=padding,
+            max_length=max_length,
+            )
 
-        # Setup the tokenizer for targets
-        with tokenizer.as_target_tokenizer():
-            labels = tokenizer(targets, max_length=258, padding=padding, truncation=True)
+        model_inputs['labels'] = tokenizer.encode(
+            targets,
+            add_special_tokens=False,
+            padding=padding,
+            max_length=258,
+            )
 
-        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
-        # padding in the loss.
         if padding == "max_length" and data_args.ignore_pad_token_for_loss:
-            labels["input_ids"] = [
-                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
-            ]
+            model_inputs['labels'][model_inputs['labels'] == tokenizer.pad_token_id] = -100
 
-        model_inputs["labels"] = labels["input_ids"]
         return model_inputs
 
     if data_args.dataset_name is not None:
@@ -285,10 +288,10 @@ def main():
 
             prompt_fn = prompt_collections[prompt].apply
 
-        with training_args.main_process_first(desc="prediction dataset map pre-processing"):
-            predict_dataset = predict_dataset.map(
+        #with training_args.main_process_first(desc="prediction dataset map pre-processing"):
+        predict_dataset = predict_dataset.map(
                 partial(preprocess_function, prompt_fn=prompt_fn),
-                batched=True,
+                #batched=True,
                 num_proc=data_args.preprocessing_num_workers,
                 remove_columns=column_names,
                 load_from_cache_file=not data_args.overwrite_cache,
@@ -351,12 +354,9 @@ def main():
     max_length = data_args.max_length
 
     logger.info("*** Predict ***")
-
     predict_results = trainer.predict(
         predict_dataset,
         metric_key_prefix="predict",
-        max_length=max_length,
-        num_beams=1
     )
     metrics = predict_results.metrics
     max_predict_samples = (
