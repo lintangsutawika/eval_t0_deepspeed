@@ -375,9 +375,14 @@ def main():
             predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
         predictions = [pred.strip() for pred in predictions]
-        output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.txt")
+        label_ids = tokenizer.batch_decode(
+            predict_results.label_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )
+        label_ids = [label.strip() for label in label_ids]
+
+        output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.tsv")
         with open(output_prediction_file, "w", encoding="utf-8") as writer:
-            writer.write("\n".join(predictions))
+            writer.writelines(list("{}\t{}\n".format(i,j) for i,j in zip(predictions,label_ids)))
 
     return results
 
