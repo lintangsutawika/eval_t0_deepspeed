@@ -219,6 +219,7 @@ def main():
 
         result = [prompt_fn(ex)]
         inputs, targets = zip(*result)
+
         inputs = list(inputs)[0]
         targets = list(targets)[0]
 
@@ -269,15 +270,16 @@ def main():
 
             def map_fn(ex):
 
-                ex['passage'] =  re.sub('@highlight', '', ex['passage'])
+                ex['passage'] =  re.sub('@highlight', "", ex['passage'])
                 ex['query'] =  re.sub('@placeholder', 'BLANK', ex['query'])
 
                 return [
-                    "Passage: {passage} \n \
-                    Quary: {query} \n \
-                    According to the passage, what does the BLANK in the query refer to? \
-                    ".format(**ex),
-                    ex["answers"],
+                    (
+                    "Passage: {passage} \n"
+                    "Query: {query} \n"
+                    "According to the passage, what does the BLANK in the query refer to?"
+                    ).format(**ex),
+                    "</>".join(ex["answers"]),
                 ]
             prompt_fn = map_fn
         else:
