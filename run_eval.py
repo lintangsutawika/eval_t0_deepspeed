@@ -277,7 +277,7 @@ def main():
                 ).load_module()
 
             prompt_fn = foo.map_fn
-            # metric = load_metric(data_args.custom_metric_path)
+            metric = load_metric(data_args.custom_metric_path)
 
         else:
             if data_args.dataset_prompt is None:
