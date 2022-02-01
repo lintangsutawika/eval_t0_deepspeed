@@ -11,5 +11,6 @@ def map_fn(ex):
         "Query: {query} \n"
         "According to the passage, what does the BLANK in the query refer to?"
         ).format(**ex),
-        "</>".join(ex["answers"]),
+        ex['answers'][0]
+        #"---".join(ex["answers"]),
     ]

@@ -220,11 +220,11 @@ def main():
         max_length = data_args.max_length
         padding = "max_length"
 
-        result = [prompt_fn(ex)]
-        inputs, targets = zip(*result)
+        result = prompt_fn(ex)
+        inputs, targets = result
 
-        inputs = list(inputs)[0]
-        targets = list(targets)[0]
+        #inputs = list(inputs)[0]
+        #targets = list(targets)[0]
 
         model_inputs = tokenizer.encode_plus(
             inputs,
@@ -318,13 +318,11 @@ def main():
         preds, labels = eval_preds
         if isinstance(preds, tuple):
             preds = preds[0]
-        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-        if data_args.ignore_pad_token_for_loss:
-            # Replace -100 in the labels as we can't decode them.
-            labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-        result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+        if isinstance(labels, tuple):
+            labels = labels[0]
+
+        result = metric.compute(predictions=preds, references=labels)
         result = {"accuracy": result["score"]}
 
         # seq_acc = 100 * np.mean([p == t for p, t in zip(decoded_preds, decoded_labels)])
@@ -341,7 +339,7 @@ def main():
         tokenizer=tokenizer,
         args=training_args,
         data_collator=data_collator,
-        compute_metrics=compute_metrics,
+        #compute_metrics=compute_metrics,
     )
 
     # Evaluation
@@ -351,7 +349,7 @@ def main():
     logger.info("*** Predict ***")
     predict_results = trainer.predict(
         predict_dataset,
-        #metric_key_prefix="predict",
+        metric_key_prefix="predict",
     )
     metrics = predict_results.metrics
     max_predict_samples = (
@@ -369,7 +367,7 @@ def main():
             skip_special_tokens=True,
             clean_up_tokenization_spaces=True
         )
-        predictions = [pred.strip() for pred in predictions]
+        #predictions = [pred.strip() for pred in predictions]
         predict_results.label_ids[predict_results.label_ids == -100] = 0
         label_ids = tokenizer.batch_decode(
             predict_results.label_ids,
@@ -378,7 +376,7 @@ def main():
         )
         #label_ids = [label.strip() for label in label_ids]
 
-        output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.tsv")
+        output_prediction_file = os.path.join(training_args.output_dir, "predictions.tsv")
         with open(output_prediction_file, "w", encoding="utf-8") as writer:
             writer.writelines(list("{}\t{}\n".format(i,j) for i,j in zip(predictions,label_ids)))
 
