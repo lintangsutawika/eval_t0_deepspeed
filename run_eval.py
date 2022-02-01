@@ -277,7 +277,8 @@ def main():
                 ).load_module()
 
             prompt_fn = foo.map_fn
-            metric = load_metric(data_args.custom_metric_path)
+            # metric = load_metric(data_args.custom_metric_path)
+
         else:
             if data_args.dataset_prompt is None:
                 prompt = prompt_collections.all_template_names[0]
@@ -369,12 +370,13 @@ def main():
             clean_up_tokenization_spaces=True
         )
         predictions = [pred.strip() for pred in predictions]
+        predict_results.label_ids[predict_results.label_ids == -100] = 0
         label_ids = tokenizer.batch_decode(
             predict_results.label_ids,
             skip_special_tokens=True,
             clean_up_tokenization_spaces=True
         )
-        label_ids = [label.strip() for label in label_ids]
+        #label_ids = [label.strip() for label in label_ids]
 
         output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.tsv")
         with open(output_prediction_file, "w", encoding="utf-8") as writer:
