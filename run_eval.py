@@ -110,6 +110,9 @@ class DataTrainingArguments:
     dataset_prompt: Optional[str] = field(
         default=None, metadata={"help": "The name of the prompt the dataset uses."}
     )
+    custom_metric_path: Optional[str] = field(
+        default=None, metadata={"help": "Path to custom metric"}
+    )
     max_predict_samples: Optional[int] = field(
         default=None,
         metadata={
@@ -265,23 +268,16 @@ def main():
             data_args.dataset_config_name
             )
 
-        if data_args.custom_template:
-            import re
+        if data_args.custom_template is not None:
+            from importlib.machinery import SourceFileLoader
+            
+            foo = SourceFileLoader(
+                "map_fn",
+                data_args.custom_template
+                ).load_module()
 
-            def map_fn(ex):
-
-                ex['passage'] =  re.sub('@highlight', "", ex['passage'])
-                ex['query'] =  re.sub('@placeholder', 'BLANK', ex['query'])
-
-                return [
-                    (
-                    "Passage: {passage} \n"
-                    "Query: {query} \n"
-                    "According to the passage, what does the BLANK in the query refer to?"
-                    ).format(**ex),
-                    "</>".join(ex["answers"]),
-                ]
-            prompt_fn = map_fn
+            prompt_fn = foo.map_fn
+            metric = load_metric(data_args.custom_metric_path)
         else:
             if data_args.dataset_prompt is None:
                 prompt = prompt_collections.all_template_names[0]
@@ -289,6 +285,7 @@ def main():
                 prompt = data_args.dataset_prompt
 
             prompt_fn = prompt_collections[prompt].apply
+            metric = load_metric("accuracy")
 
         #with training_args.main_process_first(desc="prediction dataset map pre-processing"):
         predict_dataset = predict_dataset.map(
@@ -309,9 +306,6 @@ def main():
         pad_to_multiple_of=8 if training_args.fp16 else None,
     )
 
-    # Metric
-    metric = load_metric("accuracy")
-
     def compute_metrics(eval_preds):
 
         def postprocess_text(preds, labels):
@@ -329,13 +323,11 @@ def main():
             labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-        # Some simple post-processing
-        # decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        result = metric.compute(predictions=decoded_preds, references=decoded_labels)
+        result = {"accuracy": result["score"]}
 
-        #result = metric.compute(predictions=decoded_preds, references=decoded_labels)
-        #result = {"accuracy": result["score"]}
-        seq_acc = 100 * np.mean([p == t for p, t in zip(decoded_preds, decoded_labels)])
-        result = {"accuracy": seq_acc}
+        # seq_acc = 100 * np.mean([p == t for p, t in zip(decoded_preds, decoded_labels)])
+        # result = {"accuracy": seq_acc}
 
         prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id) for pred in preds]
         result["gen_len"] = np.mean(prediction_lens)
@@ -372,11 +364,15 @@ def main():
     if trainer.is_world_process_zero():
         # if training_args.predict_with_generate:
         predictions = tokenizer.batch_decode(
-            predict_results.predictions, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            predict_results.predictions,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True
         )
         predictions = [pred.strip() for pred in predictions]
         label_ids = tokenizer.batch_decode(
-            predict_results.label_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            predict_results.label_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True
         )
         label_ids = [label.strip() for label in label_ids]
 
