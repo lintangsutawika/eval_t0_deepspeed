@@ -105,7 +105,7 @@ class DataTrainingArguments:
         default=None, metadata={"help": "The split name of the dataset to use (via the datasets library)."}
     )
     custom_template: Optional[str] = field(
-        default=False, metadata={"help": ""}
+        default=None, metadata={"help": ""}
     )
     dataset_prompt: Optional[str] = field(
         default=None, metadata={"help": "The name of the prompt the dataset uses."}
@@ -351,7 +351,7 @@ def main():
     logger.info("*** Predict ***")
     predict_results = trainer.predict(
         predict_dataset,
-        metric_key_prefix="predict",
+        #metric_key_prefix="predict",
     )
     metrics = predict_results.metrics
     max_predict_samples = (
