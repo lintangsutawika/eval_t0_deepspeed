@@ -104,7 +104,7 @@ class DataTrainingArguments:
     dataset_split_name: Optional[str] = field(
         default=None, metadata={"help": "The split name of the dataset to use (via the datasets library)."}
     )
-    custom_template: bool = field(
+    custom_template: Optional[str] = field(
         default=False, metadata={"help": ""}
     )
     dataset_prompt: Optional[str] = field(
