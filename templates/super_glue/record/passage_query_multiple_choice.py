@@ -9,6 +9,8 @@ def map_fn(ex):
     choices = ex['entities']
     alphabet = string.ascii_uppercase
 
+    print(ex['answers'])
+
     choice_list = list(zip(alphabet[:len(choices)], choices))
     answer_choices = []
     for alphabet, choice in choice_list:
@@ -25,5 +27,6 @@ def map_fn(ex):
         "According to the passage, Which of these choices does the BLANK in the query refer to?\n "
         "{multiple_choice}"
         ).format(**ex),
-        "---".join(answer_choices),
+        "Test Test Test"
+        #", ".join(answer_choices),
     ]

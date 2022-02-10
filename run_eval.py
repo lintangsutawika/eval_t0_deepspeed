@@ -270,7 +270,7 @@ def main():
 
         if data_args.custom_template is not None:
             from importlib.machinery import SourceFileLoader
-            
+
             foo = SourceFileLoader(
                 "map_fn",
                 data_args.custom_template
@@ -362,6 +362,9 @@ def main():
 
     if trainer.is_world_process_zero():
         # if training_args.predict_with_generate:
+        predict_results.label_ids[predict_results.label_ids == -100] = 0
+        print(tokenizer.decode(predict_results.label_ids[0]))
+        sys.exit()
         predictions = tokenizer.batch_decode(
             predict_results.predictions,
             skip_special_tokens=True,
