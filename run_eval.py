@@ -386,7 +386,7 @@ def main():
         )
         #label_ids = [label.strip() for label in label_ids]
 
-        output_prediction_file = os.path.join(training_args.output_dir, "predictions.tsv")
+        output_prediction_file = os.path.join(training_args.output_dir, f"{data_args.dataset_name}-{data_args.dataset_config_name}-predictions.tsv")
         with open(output_prediction_file, "w", encoding="utf-8") as writer:
             writer.writelines(list("{}\t{}\n".format(i,j) for i,j in zip(predictions,label_ids)))
 
