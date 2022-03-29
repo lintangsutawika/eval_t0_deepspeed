@@ -98,8 +98,14 @@ class DataTrainingArguments:
     dataset_name: Optional[str] = field(
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
+    promptsource_dataset_name: Optional[str] = field(
+        default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
+    )
     dataset_config_name: Optional[str] = field(
         default=None, metadata={"help": "The configuration name of the dataset to use (via the datasets library)."}
+    )
+    promptsource_dataset_config_name: Optional[str] = field(
+        default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
     dataset_split_name: Optional[str] = field(
         default=None, metadata={"help": "The split name of the dataset to use (via the datasets library)."}
@@ -264,9 +270,9 @@ def main():
         # Get all the prompts
         collection = TemplateCollection()
         prompt_collections = collection.get_dataset(
-            data_args.dataset_name,
-            data_args.dataset_config_name
-            )
+            data_args.promptsource_dataset_name,
+            data_args.promptsource_dataset_config_name
+        )
 
         if data_args.custom_template is not None:
             from importlib.machinery import SourceFileLoader
@@ -284,7 +290,8 @@ def main():
                 prompt = prompt_collections.all_template_names[0]
             else:
                 prompt = data_args.dataset_prompt
-
+            
+            print("👉 using prompt:", prompt)
             prompt_fn = prompt_collections[prompt].apply
             metric = load_metric("accuracy")
 

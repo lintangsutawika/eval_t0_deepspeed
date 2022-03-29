@@ -2,3 +2,4 @@ git+https://github.com/huggingface/transformers
 deepspeed
 datasets
 sentencepiece
+promptsource
